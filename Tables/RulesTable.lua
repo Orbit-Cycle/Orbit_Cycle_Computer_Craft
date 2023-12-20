@@ -1,5 +1,6 @@
 ---@diagnostic disable: undefined-global, undefined-field
 local TitleScreen = {
+    Type="",
     BackgroundColor = colors.red,
     Title = {
         Text = "Hello",
@@ -8,4 +9,11 @@ local TitleScreen = {
 		
 	}
 }
-return {TitleScreen}
+
+local Types = {
+    [1] = "TitleScreen",
+    [2] = "BasicList",
+    [3] = "Advertisement"
+}
+
+return {Types, {TitleScreen}}

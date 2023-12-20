@@ -3,11 +3,13 @@
 
 local protocol = "bussyPhui9076@"
 
-local filename = "DisplayTables.lua" -- filename to access for tables
-local repo = "https://raw.githubusercontent.com/Michael-Hazan/Orbit_Cycle_CC/main/Tables/RulesTable.lua?token=GHSAT0AAAAAACLQTGHDPFW7UQ3NWQDARC7YZMBZFBA" -- github link
+local filename = "DisplayTables" -- filename to access for tables
+local repo = "https://raw.githubusercontent.com/Michael-Hazan/Orbit_Cycle_CC/main/Tables/RulesTable.lua" -- github link
 
 -- monitors IDS
-local monitors = {}
+local Monitors = {}
+
+local SlideTypes, SlideTables
 
 
 local function Contains(table, val)
@@ -16,46 +18,81 @@ local function Contains(table, val)
             return true
         end
     end
-	return false
+    return false
 end
 
 
 
 local function Dump(o)
-   if type(o) == 'table' then
-      local s = '{ '
-      for k,v in pairs(o) do
-         if type(k) ~= 'number' then k = '"'..k..'"' end
-         s = s .. '['..k..'] = ' .. Dump(v) .. ','
+    if type(o) == 'table' then
+        local s = '{ '
+        for k, v in pairs(o) do
+            if type(k) ~= 'number' then k = '"' .. k .. '"' end
+            s = s .. '[' .. k .. '] = ' .. Dump(v) .. ','
+        end
+        return s .. '} '
+    else
+        return tostring(o)
+    end
+end
+
+local function getHTTP(url)
+    local valid, reason = http.checkURL(url)
+    if not valid then
+        error("Failure to get url ("..url.."), Reason: ".. reason)
+    end
+    http.request( url )
+    local event 
+    while true do
+      event = { os.pullEventRaw() }
+      if (event[1] == "http_success") then
+            break
+      elseif (event[1] == "http_failure") then
+            error("No response from server.", 2)
+            
       end
-      return s .. '} '
-   else
-      return tostring(o)
-   end
+    end
+
+    return event[3].readAll()
+end
+
+local function centerTextXY(text, color, bgcolor)
+    local w, h = term.getSize()
+    local x,y = term.getCursorPos()
+    term.setCursorPos(math.floor(w / 2 - text:len() / 2 + .5), y)
+    if color then term.setTextColor(color) end
+    if bgcolor then term.setBackgroundColor(bgcolor) end
+    term.write(text)
+    term.setTextColor(colors.white)
+    term.setBackgroundColor(colors.black)
+    print()
+    sleep(1)
 end
 
 local function loadTables()
-    local website = http.get(repo)
+    local website = getHTTP(repo)
     if website then
-        shell.run("wget " .. repo .. " " .. filename)
-        print("Downloaded tables!")
+        shell.run("wget " .. repo .. " " .. filename.. ".lua")
+        print("Downloaded tables!\n")
+        SlideTypes, SlideTables = require(filename)
+        print("Loaded tables and types!\n")
     else
-        print("Failed to get tables! Website not found.")
+        print("Failed to get tables! Website not found.\n")
     end
 end
 
 
--- runtime Function, activates all of the displays 
+-- runtime Function, activates all of the displays
 local function run()
     rednet.broadcast("startupSpawnDisplays -" .. protocol)
     sleep(0.5)
-    print("Searching for monitors")
+    print("Searching for monitors\n")
     local id, message = rednet.receive(protocol)
     local i = 1
     while message ~= nil do
         if message == "DisplayMonitor" then
-            if not Contains(monitors, id) then
-                monitors[i] = id
+            if not Contains(Monitors, id) then
+                Monitors[i] = id
                 i = i + 1
             end
             rednet.broadcast("Recieved " .. id, protocol)
@@ -63,7 +100,7 @@ local function run()
         id, message = rednet.receive(protocol, 1)
     end
 
-    print("Monitors IDS: (Connected)\n" .. Dump(monitors))
+    print("Monitors IDS: (Connected)\n" .. Dump(Monitors).. "\n")
 
     while true do
         local table1 = {
@@ -99,59 +136,54 @@ local command = "start"
 local functions =  {
     run = run,
     loadtables = loadTables,
-    monitors = function()
-        print(Dump(monitors))
+    Monitors = function()
+        print(Dump(Monitors).."\n")
     end,
     test = function()
-        rednet.broadcast("Testing...", protocol)   
+        rednet.broadcast("Testing...", protocol)
     end,
     help = function()
         print(
+            "\n"..
             "stop - Stops the program \n"..
             "run - starts up all of the display monitors (make sure the program -DisplayMonitor- runs on them as well)\n"..
             "test - sends a test message\n"..
             "monitors - gives a list of monitors IDS that are connected\n"..
-            "loadtables - redownloads the tables"
+            "loadtables - redownloads the tables"..
+            "\n\n"
         )
     end,
     stop = function()
-        print("bye bye!")
+        print("bye bye!\n")
     end
 }
 
 
 
 if not fs.exists(filename) then
-    local website = http.get(repo)
+    local website = getHTTP(repo)
     if website then
-        shell.run("wget " .. repo .. " " .. filename)
-        print("Downloaded tables!")
+        shell.run("wget " .. repo .. " " .. filename.. ".lua")
+        print("Downloaded tables!\n")
+        SlideTypes, SlideTables = require(filename)
+        print("Loaded tables and types!\n\n")
+        term.setTextColor(colors.yellow)
+        print("Types: " .. Dump(SlideTypes).."\n")
+        print()
+        print("Tables: " .. Dump(SlideTables).."\n")
     else
-        print("Failed to get tables! Website not found.")
+        print("Failed to get tables! Website not found.\n")
     end
 else
-    print("Tables already loaded")
+    print("Tables already loaded\n")
 end
 
-
-print("Loaded! type help for list of commands")
+sleep(1)
+centerTextXY("Loaded! type help for list of commands", colors.green, colors.white)
 while command ~= "stop" do
     command = io.read()
-    if command == "test" then
-        rednet.broadcast(rednet.lookup(protocol), protocol)
-    elseif command == "run" then
-        run()
-    elseif command == "monitors" then
-        print(Dump(monitors))
-    elseif command == "help" then
-        print(
-        "stop - Stops the program \n run - starts up all of the display monitors (make sure the program -DisplayMonitor- runs on them as well)")
-    elseif command == "stop" then
-        print("bye bye")
-    else
-        print("invalid command.")
-    end
+    functions[command]()
 end
 
 
-rednet.unhost("Controller")
+rednet.unhost()
