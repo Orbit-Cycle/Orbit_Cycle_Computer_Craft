@@ -10,8 +10,9 @@ while true do
     local e, param1, param2, param3 = os.pullEvent()
     if e == 'key' then
     	if  param1 == 259 then
-        	term.clear()
-          print("-- redacted --")
+            term.clear()
+			term.setCursorPos(0,0)
+          	print("-- redacted --")
    		end
     else
 		id, message = rednet.receive(protocol, 0.5)

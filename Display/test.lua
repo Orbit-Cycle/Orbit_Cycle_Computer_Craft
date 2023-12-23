@@ -15,6 +15,8 @@ local currentDisplayTable
 
 local protocol, controllerID
 
+local id
+local message = ""
 local bigfont
 
 
@@ -84,6 +86,9 @@ local function CenteredText(onX, onY, text, offsetx, offsety)
 end
 
 local function write(table, access)
+    -- Set Background Color
+
+
     -- Set Text Color
     local validColor = table[access]["Color"] ~= nil and mon.isColor(table[access]["Color"])
     mon.setTextColor(validColor and table[access]["Color"] or mon.getTextColor())
@@ -96,25 +101,22 @@ local function write(table, access)
     --  Writes Text
     if table["TextSize"] <= 5 then
         if type(table[access]["Text"]) == "table" then
-            local x, y = CenteredText(false, table[access]["CenteredY"], table[access]["Text"][1], 1.25, 1.05)
+            local x,y = CenteredText(table[access]["CenteredX"], table[access]["CenteredY"], table[access]["Text"][1], 1.25,1.25)
             mon.setCursorPos(x, y)
-
             for i = 1, #table[access]["Text"], 1 do
-                x, y = CenteredText(table[access]["CenteredX"], false, table[access]["Text"][i], 1.25, 1.25)
-                mon.setCursorPos(x, y)
                 mon.write(table[access]["Text"][i])
                 local _, py = mon.getCursorPos()
                 mon.setCursorPos(x,py+1)
             end
         else
-            local x,y = CenteredText(table[access]["CenteredX"], table[access]["CenteredY"], table[access]["Text"], 1, 1)
+            local x,y = CenteredText(table[access]["CenteredX"], table[access]["CenteredY"], table[access]["Text"][i], 1, 1)
             mon.setCursorPos(x,y)
             mon.write(table[access]["Text"])
             local _, py = mon.getCursorPos()
             mon.setCursorPos(1,py+1)
         end
     else
-        local x,y = CenteredText(table[access]["CenteredX"], table[access]["CenteredY"], table[access]["Text"], 1.95,1.25)
+        local x,y = CenteredText(table[access]["CenteredX"], table[access]["CenteredY"], table[access]["Text"][1], 1.95,1.25)
         mon.setCursorPos(x,y)
         bigfont.writeOn(mon, 2, table[access]["Text"], mon.getCursorPos())
     end
@@ -127,16 +129,17 @@ end
 Writes table from type TitleScreen onto monitor.
 Table:
 {
-    Type = "TitleScreen",
-    BackgroundColor = colors.lightBlue,
-    TextSize = 5,
-    Timeout = 5,
+    Type="TitleScreen",
+    BackgroundColor = colors.red,
     Title = {
-        Text = "Welcome",
+        Text = "Hello",
+        TextSize = 14,
         CenteredX = true,
         CenteredY = true,
-        Color = colors.white,
-    }
+        Color = colors.blue,
+        BackgroundColor = colors.white
+
+	}
 }
 --]]
 local function decodeTitleScreen(table)
@@ -163,33 +166,18 @@ local decodeTypes = {
 local function decode(table)
     decodeTypes["reset"]()
     -- Change Background Color Of The Entire Monitor
-    if type(table["BackgroundColor"]) == "number" then
-        mon.setBackgroundColor(table["BackgroundColor"])
-    else
-        local downloadImage = http.get(table["BackgroundColor"])
-        local file = fs.open("backgroundImage", "w")
-        print(downloadImage.readAll())
-        file.write(downloadImage.readAll())
-        local img = paintutils.loadImage("backgroundImage")
-        paintutils.drawImage(img, 1, 1)
-        downloadImage.close()
-    end
-
-    print("Writing - ".. table["Type"])
+    mon.setBackgroundColor(table["BackgroundColor"])
+    print(table["BackgroundColor"])
     decodeTypes[table["Type"]](table)
+
 end
 
 local function display()
     print("Displaying")
-    local id = -1
-    local message
     while true do
+
         repeat
-            id, message = rednet.receive(protocol, 35)
-            if not rednet.lookup(protocol, "Controller") then
-                print("Disconnected from Controller")
-                startup()
-            end
+            id, message = rednet.receive(protocol)
         until id == controllerID and message ~= nil
         currentDisplayTable = message
 
@@ -214,10 +202,8 @@ local function checkForController(message)
 end
 
 local function startup()
-    print("Searching For Controller")
-    local message
     repeat
-        _, message = rednet.receive()
+        id, message = rednet.receive()
 	until checkForController(message)
 
     print("Starting up.")
@@ -235,7 +221,7 @@ local function startup()
 
 	repeat
         rednet.send(controllerID, "DisplayMonitor", protocol)
-		_, message = rednet.receive(protocol, 2)
+		id, message = rednet.receive(protocol, 2)
 	until message == "Recieved " .. os.getComputerID()
 
 	display()

@@ -1,22 +1,24 @@
 ---@diagnostic disable: undefined-global, undefined-field
 
+
+--[[ Notes:
+ - Text Scale (TextSize) starts at 0.5 and ends at 5 (scale can be any multiple of 0.5)
+   anything higher then 5 will use Wojbie bigfont API to create an enormous text (be careful, it is BIG)
+]]
 local TitleScreen = {
-    Type="TitleScreen",
-    BackgroundColor = "https://cdn.discordapp.com/attachments/1175788512948273162/1187453611110842448/OrbitCycle.jpg?ex=6596f15a&is=65847c5a&hm=e20a49c9ed1d6f8b4f079872f3902b0e28bdf1bb5d0bfb433f3e4196cda0ff70&",
+    Type = "TitleScreen",
+    BackgroundColor = colors.lightBlue,
     TextSize = 5,
     Timeout = 5,
     Title = {
-        Text = {
-            [1] = "Welcome to",
-            [2] = "Orbit Cycle!"
-        },
+        Text = "Welcome",
         CenteredX = true,
         CenteredY = true,
         Color = colors.white,
     }
 }
 local FirstScreen = {
-    Type="BasicList",
+    Type = "BasicList",
     BackgroundColor = colors.blue,
     TextSize = 2,
     Timeout = 30,
@@ -44,7 +46,7 @@ local FirstScreen = {
         Color = colors.white,
     }
 }
-
+local Clickable
 
 local Types = {
     [1] = "TitleScreen",
@@ -53,5 +55,5 @@ local Types = {
     [4] = "Clickable",
     [5] = "Logo"
 }
-
-return {SlideTypes=Types, SlideTables={TitleScreen, FirstScreen}}
+-- The order of which the tables are 
+return {SlideTypes=Types, SlideTables={TitleScreen, BasicList}}

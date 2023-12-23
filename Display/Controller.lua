@@ -3,8 +3,13 @@
 
 local protocol = "bussyPhui9076@"
 
-local filename = "DisplayTables" -- filename to access for tables
-local repo = "https://raw.githubusercontent.com/Michael-Hazan/Orbit_Cycle_CC/main/Tables/RulesTable.lua" -- github link
+local filename = "DisplayTables"                                                                             -- Filename to access for tables // Change only for prefrence
+local repo = "https://raw.githubusercontent.com/Michael-Hazan/Orbit_Cycle_CC/main/Tables/RulesTable.lua" -- Github link / wget available link to get tables from
+local lockedrepo, token = false, "repotoken"                                                                             -- Make sure your github repository it open
+
+
+local startupMessage = "startupSpawnDisplays" --
+
 
 -- monitors IDS
 local Monitors = {}
@@ -39,26 +44,25 @@ end
 local function getHTTP(url)
     local valid, reason = http.checkURL(url)
     if not valid then
-        error("Failure to get url ("..url.."), Reason: ".. reason)
+        error("Failure to get url (" .. url .. "), Reason: " .. reason)
     end
-    http.request( url )
-    local event 
+    http.request(url)
+    local event
     while true do
-      event = { os.pullEventRaw() }
-      if (event[1] == "http_success") then
+        event = { os.pullEventRaw() }
+        if (event[1] == "http_success") then
             break
-      elseif (event[1] == "http_failure") then
+        elseif (event[1] == "http_failure") then
             error("No response from server.", 2)
-            
-      end
+        end
     end
 
     return event[3].readAll()
 end
 
-local function centerTextXY(text, color, bgcolor)
-    local w, h = term.getSize()
-    local x,y = term.getCursorPos()
+local function centerTextX(text, color, bgcolor)
+    local w, _ = term.getSize()
+    local _, y = term.getCursorPos()
     term.setCursorPos(math.floor(w / 2 - text:len() / 2 + .5), y)
     if color then term.setTextColor(color) end
     if bgcolor then term.setBackgroundColor(bgcolor) end
@@ -66,13 +70,12 @@ local function centerTextXY(text, color, bgcolor)
     term.setTextColor(colors.white)
     term.setBackgroundColor(colors.black)
     print()
-    sleep(1)
 end
 
 local function loadTables()
     local website = getHTTP(repo)
     if website then
-        shell.run("wget " .. repo .. " " .. filename.. ".lua")
+        shell.run("wget " .. repo .. " " .. filename .. ".lua")
         print("Downloaded tables!\n")
         SlideTypes, SlideTables = require(filename)
         print("Loaded tables and types!\n")
@@ -84,10 +87,12 @@ end
 
 -- runtime Function, activates all of the displays
 local function run()
-    rednet.broadcast("startupSpawnDisplays -" .. protocol)
-    sleep(0.5)
     print("Searching for monitors\n")
-    local id, message = rednet.receive(protocol)
+    local id, message
+    repeat
+        rednet.broadcast(startupMessage .. " -" .. protocol)
+        id, message = rednet.receive(protocol)
+    until message ~= nil and message == "DisplayMonitor"
     local i = 1
     while message ~= nil do
         if message == "DisplayMonitor" then
@@ -100,24 +105,13 @@ local function run()
         id, message = rednet.receive(protocol, 1)
     end
 
-    print("Monitors IDS: (Connected)\n" .. Dump(Monitors).. "\n")
+    print("Monitors IDS: (Connected)\n" .. table.concat(Monitors, ", ") .. "\n")
 
     while true do
-        local table1 = {
-            Color = colors.blue,
-        }
-        local table2 = {
-            Color = colors.red,
-        }
-        local table3 = {
-            Color = colors.green,
-        }
-        rednet.broadcast(table1, protocol)
-        sleep(1)
-        rednet.broadcast(table2, protocol)
-        sleep(1)
-        rednet.broadcast(table3, protocol)
-        sleep(1)
+        for i = 1, #SlideTables, 1 do
+            rednet.broadcast({ Table = SlideTables[i], Types = SlideTypes }, protocol)
+            sleep(SlideTables[i]["Timeout"])
+        end
     end
 end
 
@@ -133,24 +127,24 @@ rednet.host(protocol, "Controller")
 local command = "start"
 
 -- functions to commands
-local functions =  {
+local functions = {
     run = run,
     loadtables = loadTables,
     Monitors = function()
-        print(Dump(Monitors).."\n")
+        print(Dump(Monitors) .. "\n")
     end,
     test = function()
         rednet.broadcast("Testing...", protocol)
     end,
     help = function()
         print(
-            "\n"..
-            "stop - Stops the program \n"..
-            "run - starts up all of the display monitors (make sure the program -DisplayMonitor- runs on them as well)\n"..
-            "test - sends a test message\n"..
-            "monitors - gives a list of monitors IDS that are connected\n"..
-            "loadtables - redownloads the tables"..
-            "\n\n"
+            "\n" ..
+            "stop - Stops the program \n" ..
+            "run - starts up all of the display monitors (make sure the program -DisplayMonitor- runs on them as well)\n" ..
+            "test - sends a test message\n" ..
+            "monitors - gives a list of monitors IDS that are connected\n" ..
+            "loadtables - redownloads the tables" ..
+            ""
         )
     end,
     stop = function()
@@ -161,16 +155,29 @@ local functions =  {
 
 
 if not fs.exists(filename) then
+    if locked then
+        if not token then
+            print("Needs a token to access private repository.")
+            return
+        end
+        repo = repo .. "?token=" .. token
+    end
+
     local website = getHTTP(repo)
     if website then
-        shell.run("wget " .. repo .. " " .. filename.. ".lua")
+        shell.run("wget " .. repo .. " " .. filename .. ".lua")
+
         print("Downloaded tables!\n")
-        SlideTypes, SlideTables = require(filename)
+        local SlidesInfo = require(filename) -- Getting tables and types
+        --#region Setting tables accordingly
+        SlideTypes = SlidesInfo["SlideTypes"]
+        SlideTables = SlidesInfo["SlideTables"]
+        --#endregion
         print("Loaded tables and types!\n\n")
+
         term.setTextColor(colors.yellow)
-        print("Types: " .. Dump(SlideTypes).."\n")
-        print()
-        print("Tables: " .. Dump(SlideTables).."\n")
+        print("Types: " .. table.concat(SlideTypes, " / ") .. "\n")
+        print("Tables: " .. Dump(SlideTables) .. "\n")
     else
         print("Failed to get tables! Website not found.\n")
     end
@@ -178,12 +185,14 @@ else
     print("Tables already loaded\n")
 end
 
-sleep(1)
-centerTextXY("Loaded! type help for list of commands", colors.green, colors.white)
+centerTextX("Loaded! type help for list of commands", colors.green, colors.white)
+
+run()
 while command ~= "stop" do
     command = io.read()
+    term.clear()
+    term.setCursorPos(0, 0)
     functions[command]()
 end
-
 
 rednet.unhost()
