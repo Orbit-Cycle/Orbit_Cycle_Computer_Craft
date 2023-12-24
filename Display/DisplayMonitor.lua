@@ -163,21 +163,8 @@ local decodeTypes = {
 local function decode(table)
     decodeTypes["reset"]()
     -- Change Background Color Of The Entire Monitor
-    if type(table["BackgroundColor"]) == "number" then
-        mon.setBackgroundColor(table["BackgroundColor"])
-    else
-        local downloadImage = http.get(table["BackgroundColor"])
-        local file = fs.open("backgroundImage", "w")
-        local image = downloadImage.readAll()
-        print(image)
-        file.write(textutils.serialize(image))
-        file.close()
-        local img = paintutils.loadImage("backgroundImage")
-        term.redirect(mon)
-        paintutils.drawImage(img, 1, 1)
-        --term.redirect(term.native())
-        downloadImage.close()
-    end
+    mon.setBackgroundColor(table["BackgroundColor"])
+
 
     print("Writing - ".. table["Type"])
     decodeTypes[table["Type"]](table)

@@ -2,7 +2,7 @@
 
 local TitleScreen = {
     Type="TitleScreen",
-    BackgroundColor = "https://cdn.discordapp.com/attachments/1175788512948273162/1187453611110842448/OrbitCycle.jpg?ex=6596f15a&is=65847c5a&hm=e20a49c9ed1d6f8b4f079872f3902b0e28bdf1bb5d0bfb433f3e4196cda0ff70&",
+    BackgroundColor = colors.lightBlue,
     TextSize = 5,
     Timeout = 5,
     Title = {
