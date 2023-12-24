@@ -168,10 +168,14 @@ local function decode(table)
     else
         local downloadImage = http.get(table["BackgroundColor"])
         local file = fs.open("backgroundImage", "w")
-        print(downloadImage.readAll())
-        file.write(downloadImage.readAll())
+        local image = downloadImage.readAll()
+        print(image)
+        file.write(textutils.serialize(image))
+        file.close()
         local img = paintutils.loadImage("backgroundImage")
+        term.redirect(mon)
         paintutils.drawImage(img, 1, 1)
+        --term.redirect(term.native())
         downloadImage.close()
     end
 
