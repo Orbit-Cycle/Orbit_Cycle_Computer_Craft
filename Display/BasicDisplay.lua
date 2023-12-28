@@ -30,7 +30,7 @@ while true do
 
     monitor.write(table["text"][1])
 	_,y = monitor.getCursorPos()
-    monitor.setCursorPos(x, y+4)
+    monitor.setCursorPos(x, y+2)
     monitor.write(table["text"][2])
 	
 
